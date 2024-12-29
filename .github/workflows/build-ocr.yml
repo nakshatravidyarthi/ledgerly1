@@ -13,8 +13,12 @@ env:
   IMAGE_NAME: lambda-receipt-ocr
 
 jobs:
-  login:
+  build-and-push:
     runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Login to Amazon ECR
@@ -31,15 +35,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-  build:
-      runs-on: ubuntu-24.04
-      needs: login
-
-      permissions:
-        contents: read
-        packages: write
-  
-      steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
