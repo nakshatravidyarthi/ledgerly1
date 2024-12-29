@@ -29,6 +29,8 @@ services:
     image: ghcr.io/sourasishbasu/expense-tracker-api:latest # pulls latest api image from ghcr.io
     container_name: api
     restart: unless-stopped # restart policy
+    env_file:
+      - .env
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"

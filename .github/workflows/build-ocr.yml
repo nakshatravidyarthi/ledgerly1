@@ -1,4 +1,4 @@
-name: Receipt OCR CI
+name: OCR build and push ci
 
 on:
   push:
