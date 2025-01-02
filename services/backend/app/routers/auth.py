@@ -7,28 +7,47 @@ from uuid import uuid4
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+
 def get_user_by_email(email: str, session: SessionDep) -> users | None:
     statement = select(users).where(users.email == email)
     session_user = session.exec(statement).first()
     return session_user
 
-@router.post("/register", summary="Register a new user")
+
+@router.post(
+    "/register",
+    summary="Register a new user",
+    responses={
+        201: {
+            "description": "User registered successfully",
+            "content": {"application/json": {"example": {"message": "User registered successfully", "user_id": "uuid"}}},
+        },
+        400: {
+            "description": "User already exists",
+            "content": {"application/json": {"example": {"detail": "User already exists"}}},
+        },
+        500: {
+            "description": "Server error during user registration",
+            "content": {"application/json": {"example": {"detail": "Error registering user: ERROR"}}},
+        },
+    },
+)
 def register_user(session: SessionDep, user: UserCreate = Form(...)):
     hashed_password = hash_password(user.password)
     uid = str(uuid4())
     try:
-        user = get_user_by_email(email=user.email, session=SessionDep)
-        if user:
+        existing_user = get_user_by_email(email=user.email, session=session)
+        if existing_user:
             raise HTTPException(
                 status_code=400,
-                detail="The user with this email already exists in the system",
+                detail="User already exists",
             )
-    
+
         new_user = users(
             user_id=uid,
             email=user.email,
             username=user.username,
-            password=hashed_password
+            password=hashed_password,
         )
         session.add(new_user)
         session.commit()
@@ -37,7 +56,25 @@ def register_user(session: SessionDep, user: UserCreate = Form(...)):
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error registering user: {e}")
 
-@router.post("/login", summary="Authenticate user and return user_id")
+
+@router.post(
+    "/login",
+    summary="Authenticate user and return user_id",
+    responses={
+        200: {
+            "description": "Login successful",
+            "content": {"application/json": {"example": {"message": "Login successful", "user_id": "uuid"}}},
+        },
+        401: {
+            "description": "Invalid credentials",
+            "content": {"application/json": {"example": {"detail": "Invalid credentials"}}},
+        },
+        500: {
+            "description": "Server error during login",
+            "content": {"application/json": {"example": {"detail": "Error logging in: some error"}}},
+        },
+    },
+)
 def login_user(session: SessionDep, loginrequest: LoginRequest = Form(...)):
     try:
         credentials = session.exec(

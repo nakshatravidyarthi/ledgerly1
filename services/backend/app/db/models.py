@@ -23,5 +23,12 @@ class receipts(SQLModel, table=True):
     receipt_date: date
     vendor_name: str
     total_amount: float
-    s3_url: str
+    s3_url: str | None
     user_id: str = Field(index=True)
+
+class CreateReceipt(BaseModel):
+    category: str
+    receipt_date: date
+    vendor_name: str
+    total_amount: float
+    user_id: str

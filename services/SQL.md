@@ -5,7 +5,7 @@ CREATE TABLE receipts (
     receipt_date DATE NOT NULL,               -- Date of the receipt
     vendor_name VARCHAR(255) NOT NULL,                 -- Vendor's name
     total_amount NUMERIC(10, 2) NOT NULL,              -- Total amount in currency
-    s3_url TEXT NOT NULL                      -- URL of the receipt in S3
+    s3_url TEXT DEFAULT NULL                     -- URL of the receipt in S3
 );
 
 -- Index for faster querying by user_id and category

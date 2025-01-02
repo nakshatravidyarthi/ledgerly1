@@ -34,7 +34,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.routers.api.rule=Host(`ec2-35-154-2-85.ap-south-1.compute.amazonaws.com`)" # Update for domain routing
+      - "traefik.http.routers.api.rule=Host(`subdomain`)" # Update for domain routing
       - "traefik.http.services.api.loadbalancer.server.port=5000" # API container's internal port
     healthcheck:
       test: > # healthcheck on /health route of api using in built tools
