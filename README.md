@@ -1,6 +1,6 @@
-## Expense Tracker API
+## Ledgerly
 
-![banner](https://github.com/SourasishBasu/File-Wizard/assets/89185962/bff3880e-d6d9-46c6-aa20-a95c2e5952fd)
+![banner](./assets/banner.png)
 <h1 align="center">Expense Tracker</h1>
 
 <p align="center">
@@ -10,25 +10,33 @@
 
 <p align="center">
   <a href="#features"><strong>Features</strong></a> ·
-  <a href="#running-locally"><strong>Running locally</strong></a> ·
   <a href="#overview"><strong>Overview</strong></a> ·
-  <a href="#api-routing"><strong>API Routing</strong></a> ·
+  <a href="#aws-setup"><strong>AWS Setup</strong></a> ·
+  <a href="#remote-backend-setup"><strong>Backend Setup</strong></a> ·
+  <a href="#usage"><strong>Usage</strong></a> ·
+  <a href="#monitoring"><strong>Monitoring</strong></a> ·
   <a href="#authors"><strong>Authors</strong></a>
 </p>
-
 
 ## Features
 
 - **Website**
   - [NextJS](https://nextjs.org) App Router
-  - [Amazon Web Services](https://docs.aws.amazon.com/) for backend functionality
-  - Support for `S3` File Storage, and `Lambda` functions
+  - [Amazon Web Services](https://docs.aws.amazon.com/) for backend functionality with `EC2`
+  - Support for `S3` File Storage, and `Lambda` Container image based Functions
   - Edge runtime-ready
   
 - **AWS Infrastructure**
-  - [Amazon S3](https://aws.amazon.com/s3) Allows for object storage and static site hosting
+  - [Amazon S3](https://aws.amazon.com/s3) Utilized for image storage.
   - [AWS Lambda](https://aws.amazon.com/lambda) for processing JSON and filtering required data
   - [Amazon EC2](https://aws.amazon.com/sns) for provisioning VM instances 
+  - [Amazon ECR](https://aws.amazon.com/ecr) for privately hosting container images 
+
+- **External**
+  - Extensive Observability and monitoring systems in place with [Prometheus](https://prometheus.io/docs/introduction/overview/), [Grafana](https://grafana.com/docs/grafana/latest/), [GoAccess](https://goaccess.io/)
+  - [Gemini API](https://ai.google.dev/gemini-api/docs) for image to text extraction using Vision Model within free tier limits.
+  - [Github Actions](https://github.com/features/actions) CI pipelines to build, test and push application images from Github to various registries.
+  - [Traefik](https://doc.traefik.io/) acts as a dynamic reverse proxy and automatically manages SSL/TLS certificates
 
 ### Tech Stack
 ![NextJs](https://img.shields.io/badge/Nextjs-black?style=for-the-badge&logo=nextdotjs&logoColor=white)
@@ -48,8 +56,208 @@
 ## Overview
 <img alt="AWS Architecture" src="./assets/arch.png">
 
-----
+- The **backend** consists of 3 main services being the **Python based REST API** developed using **FastAPI** for serving requests, performing CRUD operations, a **RDS Postgres** database for data storage and retrieval and a **S3 Bucket** for image storage and hosting.
+- The other 5 services consist **Traefik** acting as reverse proxy and automatic SSL provision, log creation and resource usage visualization using custom **log exporters, Prometheus** and **Grafana.**
+- All of these services are run using **Docker** containers to ensure availability and performance.
+
+## Folder Structure
+
+```
+.
+├── README.md
+├── assets
+│   └── arch.png
+├── docker-compose.yml
+├── monitoring
+│   ├── grafana
+│   │   └── datasources.yml
+│   └── prometheus
+│       └── prometheus.yaml
+└── services
+    ├── SQL.md
+    ├── backend
+    │   ├── Dockerfile
+    │   ├── app
+    │   │   ├── __init__.py
+    │   │   ├── app.py
+    │   │   ├── core
+    │   │   │   ├── __init__.py
+    │   │   │   ├── config.py
+    │   │   │   ├── db.py
+    │   │   │   └── utils.py
+    │   │   ├── db
+    │   │   │   ├── __init__.py
+    │   │   │   └── models.py
+    │   │   ├── main.py
+    │   │   └── routers
+    │   │       ├── __init__.py
+    │   │       ├── auth.py
+    │   │       ├── deps.py
+    │   │       └── receipts.py
+    │   ├── pyproject.toml
+    │   └── uv.lock
+    └── receipt-ocr
+        ├── Dockerfile
+        └── app.py
+
+12 directories, 24 files
+```
+
+# AWS Setup
+
+
+---
+
+# Remote Backend Setup
+
+1. Install git. Clone the repository and move the contents of the `monitoring/` folder into the EC2 machine.
+
+```bash
+mkdir backend
+git clone https://github.com/sourasishbasu/ledgerly.git
+mv ./ledgerly/monitoring/* ./ledgerly/docker-compose.yml /home/ubuntu/backend
+```
+
+2. Create the logs folder and secrets file. Copy contents of `services/backend/env.example` and replace secrets and endpoints into the `.env` file.
+
+```bash
+cd backend
+mkdir logs
+touch .env
+```
+3. Install Docker.
+
+## Database
+
+The default architecture utilizes AWS RDS' free `t4g.micro` instance for hosting the Postgresql database. As an alternative a `postgres` container can also be run within `Docker` on an EC2 machine for the same utility. 
+
+### Default Credentials
+`username` - user
+
+`pass` - pass
+
+`DB Name` - testdb
+
+`port` - 5432
+
+`host` - EC2 public IP or RDS Connection URL
+
+### Creating tables
+
+<img alt="AWS Architecture" src="./assets/er.png">
+
+Copy the contents of `ledgerly.sql` into the SQL Query Editor within any database tool used for connecting to the postgres container.
+
+## Traefik
+
+Traefik serves as a **reverse proxy** to route HTTP requests to the appropriate backend services. 
+
+
+- Traefik automatically **detects and routes traffic** to Docker services. Services must explicitly enable routing via labels, ensuring only intended services are exposed.
+
+- **Web traffic** is routed through an HTTP entrypoint on port 80. The API service listens internally on port 5000, which Traefik uses to forward incoming requests.
+
+- **Access logs** are enabled and stored in the ./logs/traefik-access.log file, used by `GoAccess` to create the dashboard
+
+- Handle **HTTPS** for the application by integrating with `Let's Encrypt` for automatic certificate management, simplifying secure communication for all exposed services.
+
+## Monitoring
+
+The Ledgerly backend includes a comprehensive monitoring setup using metrics' exporters, Prometheus and Grafana. This allows user to collect metrics, visualize data, and set up alerts for your application.
+
+### Exporters
+
+Services which collect and expose system and application metrics from specific resources or environments, making them available in a format that monitoring and observability systems such as Prometheus can scrape and process.
+
+#### Node Exporter
+
+Used for collectin hardware and OS-level metrics from a Linux server such as Disk I/O, CPU, Memory usage etc.
+
+#### cAdvisor
+
+Used for monitoring resource usage and performance metrics for containers.
+
+### Prometheus
+
+Prometheus is used to scrape and store metrics from various endpoints. The configuration for Prometheus is located in `monitoring/prometheus/prometheus.yaml`.
+
+```bash
+hostname -I
+```
+
+Replace EC2 instance's private IP into `backend/prometheus/prometheus.yml` under `node_exporter` and `cAdvisor` job's targets.
+
+```yaml
+scrape_configs:
+  - job_name: node_exporter
+    static_configs:
+      - targets: ["<instance-private-ip>:9100"]
+```
+
+### Grafana
+
+Grafana is used to visualize the metrics collected by Prometheus. The configuration for Grafana datasources is located in `monitoring/grafana/datasources.yml`.
+
+- Go to dashboards > New > Import
+- Go to Import Dashboard with ID > enter 16310 > Load
+- Select Main (Prometheus) as the Data Source if prompted
+
+Grafana Dashboard URL: `http://<instance-public-ip>:3000`
+
+<img alt="AWS Architecture" src="./assets/grafana.png">
+
+### GoAccess
+
+Generates an extremely detailed real time HTML report of web traffic of an API such as visitors, hits, geolocation etc.
+
+#### Credentials
+
+`username` - admin
+
+`pass` - projectwing
+
+GoAccess Dashboard URL: `http://<instance-public-ip>:7880`
+
+<img alt="AWS Architecture" src="./assets/goaccess.png">
+
+# Usage
+
+**Set up AWS credentials**:
+   Ensure you have your AWS credentials configured. You can do this by setting environment variables or using the AWS CLI.
+
+Run the containers with `Docker Compose`.
+
+```
+docker compose up --build --pull missing -d
+```
+
+Once the Docker container is up, API will be accessible at `http://<instance-public-ipv4-dns>`.
+
+> [!NOTE]
+> Detailed API docs along with examples and template data can be found at [Scalar Docs](https://expense-tracker.apidocumentation.com/).
+
+
+## Expected Result
+
+```bash
+$ docker compose ps
+NAME            IMAGE                                              COMMAND                  SERVICE         CREATED        STATUS                    PORTS
+api             ghcr.io/sourasishbasu/expense-tracker-api:latest   "fastapi run app/mai…"   api             24 hours ago   Up 10 minutes (healthy)   5000/tcp
+cadvisor        gcr.io/cadvisor/cadvisor:latest                    "/usr/bin/cadvisor -…"   cadvisor        24 hours ago   Up 10 minutes (healthy)   0.0.0.0:8090->8080/tcp, [::]:8090->8080/tcp
+goaccess        xavierh/goaccess-for-nginxproxymanager:latest      "tini -- /goan/start…"   goaccess        24 hours ago   Up 10 minutes             0.0.0.0:7880->7880/tcp, :::7880->7880/tcp
+grafana         grafana/grafana-oss:11.4.0                         "/run.sh"                grafana         24 hours ago   Up 10 minutes             0.0.0.0:3000->3000/tcp, :::3000->3000/tcp
+node_exporter   quay.io/prometheus/node-exporter:latest            "/bin/node_exporter …"   node_exporter   24 hours ago   Up 10 minutes
+prometheus      prom/prometheus:latest                             "/bin/prometheus --c…"   prometheus      24 hours ago   Up 10 minutes             0.0.0.0:9090->9090/tcp, :::9090->9090/tcp
+traefik         traefik:latest                                     "/entrypoint.sh --ap…"   traefik         24 hours ago   Up 10 minutes             0.0.0.0:80->80/tcp, :::80->80/tcp, 0.0.0.0:8080->8080/tcp, :::8080->8080/tcp
+```
+
+## Authors
 
 This project was made for Project Wing 2025 by [MLSAKIIT](https://mlsakiit.com/).
 
-Docs coming soon!
+- Sourasish Basu ([@SourasishBasu](https://github.com/SourasishBasu)) - [MLSA KIIT](https://mlsakiit.com)
+
+## Version
+| Version | Date          		| Comments        |
+| ------- | ------------------- | --------------- |
+| 1.0     | Dec 29th, 2024   | Initial release |
