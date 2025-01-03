@@ -1,7 +1,5 @@
-## Ledgerly
-
 ![banner](./assets/banner.png)
-<h1 align="center">Expense Tracker</h1>
+<h1 align="center">Ledgerly</h1>
 
 <p align="center">
   An open source, self hostable expense tracking platform built with NextJS, Python<br>
