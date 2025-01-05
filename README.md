@@ -68,7 +68,9 @@
 │   ├── banner.png
 │   ├── er.png
 │   ├── goaccess.png
-│   └── grafana.png
+│   ├── grafana.png
+│   ├── inboundrules.png
+│   └── lambda-uri.png
 ├── docker-compose.yml
 ├── monitoring
 │   ├── grafana
