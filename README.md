@@ -107,6 +107,11 @@
 12 directories, 30 files
 ```
 
+Primary Services:
+- `services/backend:` This subdirectory consists of the primary backend API for the entire application facilitating user registration, login, image upload and CRUD operations with the database.
+- `services/receipt-ocr:` This subdirectory consists of the helper application which extracts relevant data using an LLM from user submitted receipt images and adds these records into the database.
+- `monitoring/:` This folder consists of all configurations required for the monitoring systems in place.
+
 # AWS Setup
 
 > [!NOTE]  
@@ -151,6 +156,8 @@ AWS Elastic Container Registry will be used to host the container images to be r
 - Build the image for `services/receipt-ocr` using Docker locally with the tag `latest` and push it to the ECR repository just created.
 
 ## RDS
+
+AWS RDS with PostgreSQL will serve as the primary database for storing user and receipt data for our application.
 
 - Go to Databases > Create Database > Standard Create.
 - Select PostgreSQL. Under Engine Version, choose PostgreSQL 17.2-R1.
@@ -221,7 +228,7 @@ Go to Environment Variables > Edit. Add the following variables required by the 
 
 ## S3
 
-AWS S3 is utilized for encrypted storage and hosting of user's receipt images.
+AWS S3 will be utilized for encrypted storage and hosting of user's receipt images.
 
 - Create a new bucket. Choose a name and select ACLs enabled under Object Ownership.
 - Under Block all public settings for this bucket, disable Block All public Access.
@@ -230,6 +237,8 @@ AWS S3 is utilized for encrypted storage and hosting of user's receipt images.
 - Under Destination select Lambda function > Choose from your Lambda functions > Select the function created in <a href="#lambda">Lambda</a> section.
 
 ## EC2
+
+AWS EC2 will be used for provisioning a virtual machine for running Docker containers of the application and various services.
 
 Go to Instances > Launch Instances. Create an EC2 instance with the following specs:
 
