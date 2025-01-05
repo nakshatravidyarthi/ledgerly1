@@ -31,7 +31,7 @@
   - [Amazon ECR](https://aws.amazon.com/ecr) for privately hosting container images 
 
 - **External**
-  - Extensive Observability and monitoring systems in place with [Prometheus](https://prometheus.io/docs/introduction/overview/), [Grafana](https://grafana.com/docs/grafana/latest/), [GoAccess](https://goaccess.io/)
+  - [Prometheus](https://prometheus.io/docs/introduction/overview/), [Grafana](https://grafana.com/docs/grafana/latest/) and [GoAccess](https://goaccess.io/) for extensive observability and monitoring of resources. 
   - [Gemini API](https://ai.google.dev/gemini-api/docs) for image to text extraction using Vision Model within free tier limits.
   - [Github Actions](https://github.com/features/actions) CI pipelines to build, test and push application images from Github to various registries.
   - [Traefik](https://doc.traefik.io/) acts as a dynamic reverse proxy and automatically manages SSL/TLS certificates
@@ -55,16 +55,20 @@
 <img alt="AWS Architecture" src="./assets/arch.png">
 
 - The **backend** consists of 3 main services being the **Python based REST API** developed using **FastAPI** for serving requests, performing CRUD operations, a **RDS Postgres** database for data storage and retrieval and a **S3 Bucket** for image storage and hosting.
-- The other 5 services consist **Traefik** acting as reverse proxy and automatic SSL provision, log creation and resource usage visualization using custom **log exporters, Prometheus** and **Grafana.**
+- The other 5 services consist of **Traefik** as reverse proxy, utilized for automatic SSL provision, log creation and **Prometheus**, **Grafana** for resource usage collection and visualization using custom **log exporters**.
 - All of these services are run using **Docker** containers to ensure availability and performance.
 
-## Folder Structure
+## Project Structure
 
 ```
 .
 ├── README.md
 ├── assets
-│   └── arch.png
+│   ├── arch.png
+│   ├── banner.png
+│   ├── er.png
+│   ├── goaccess.png
+│   └── grafana.png
 ├── docker-compose.yml
 ├── monitoring
 │   ├── grafana
@@ -72,7 +76,6 @@
 │   └── prometheus
 │       └── prometheus.yaml
 └── services
-    ├── SQL.md
     ├── backend
     │   ├── Dockerfile
     │   ├── app
@@ -94,16 +97,162 @@
     │   │       └── receipts.py
     │   ├── pyproject.toml
     │   └── uv.lock
+    ├── ledgerly.sql
     └── receipt-ocr
         ├── Dockerfile
         └── app.py
 
-12 directories, 24 files
+12 directories, 28 files
 ```
 
 # AWS Setup
 
+> [!NOTE]  
+> The default architecture is based on AWS services, however all of the services and tooling can be setup within any other cloud platform of choice or self hosted locally as well if required.
 
+All the services except S3 must be setup within the same region in AWS. 
+
+All the services and configurations below adhere to the `AWS Free Tier` for a brand new account upto 12 months.
+
+## ECR
+
+AWS Elastic Container Registry will be used to host the container images to be run on AWS Lambda.
+
+> [!NOTE]  
+> AWS Lambda can only run images hosted on private registries in ECR.
+
+- Go to Private registry > Repositories > Create Repository.
+- Provide a repo namespace and name and keep the rest as default
+- Once the repository is created, select it from the Repositories and go to Actions > Permissions.
+- Under Permissions click on Edit Policy JSON and paste the below policy.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "LambdaECRImageRetrievalPolicy",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Action": [
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+      ]
+    }
+  ]
+}
+
+```
+- On the Repositories tab and note View push commands for the respective platform to use with Docker during local development.
+- Build the image for `services/receipt-ocr` using Docker locally with the tag `latest` and push it to the ECR repository just created.
+
+## RDS
+
+- Go to Databases > Create Database > Standard Create.
+- Select PostgreSQL. Under Engine Version, choose PostgreSQL 17.2-R1.
+- Under Templates, choose Free Tier.
+- Under Settings, provide a name for the database under DB Instance identifier. 
+- Create the Master Username and Master Password.
+- Under Connectivity, choose Yes under Public Access
+- Choose Create new under VPC Security Group (firewall) and provide a name.
+
+Database Connection Endpoint: `[database-name].abcdef123456.[region].rds.amazonaws.com`
+
+
+## Lambda
+
+AWS Lambda will be used for running the container image for the `services/receipt-ocr` application in a serverless environment.
+
+- Create a Function > Container Image.
+- Provide a function name. Under Container Image URI > Browse Images choose the ECR repository created earlier and select the image tagged as latest.
+
+![lambda-uri](./assets/lambda-uri.png)
+
+- Under architecture choose x86_64 and leave the rest as default. Choose Create function.
+
+### Configuration
+
+Under General configuration change the defaults as below:
+  - `Memory` - 512MB
+  - `Timeout` - 30 sec
+
+### Permissions
+
+- Under Permissions > Execution Role Name, click the role to redirect to IAM. 
+- In the IAM console, under Permission Policies > Add Permissions > Create Inline Policies.
+Switch to JSON mode and paste the below policy. Then click Create.
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObjectAcl",
+                "s3:GetObject",
+                "s3:GetObjectAttributes"
+            ],
+            "Resource": [
+                "arn:aws:s3:*:559010633691:accesspoint/*",
+                "arn:aws:s3:::projectwing/*"
+            ]
+        }
+    ]
+}
+```
+- Again, go to Add Permissions > Attach policies. 
+- Choose `AWSLambdaVPCAccessExecutionPermissions` from the list > Add permissions. 
+
+### Environment
+
+Go to Environment Variables > Edit. Add the following variables required by the application.
+
+- `API_KEY` - [Gemini API KEY]
+- `DB_HOST` - [Connection String for the Database (RDS/Docker/etc)]
+- `DB_PASS` - [Database Password]
+- `DB_USER` - [Database Username]
+- `S3_ENDPOINT` - [S3 Bucket URL of the form https://bucket-name.s3.region.amazonaws.com/]
+
+## S3
+
+AWS S3 is utilized for encrypted storage and hosting of user's receipt images.
+
+- Create a new bucket. Choose a name and select ACLs enabled under Object Ownership.
+- Under Block all public settings for this bucket, disable Block All public Access.
+- After bucket creation, go to Properties > Event Notifications > Create Event Notification.
+- Provide a name and under Event Types, choose All object create events.
+- Under Destination select Lambda function > Choose from your Lambda functions > Select the function created in <a href="#lambda">Lambda</a> section.
+
+## EC2
+
+Go to Instances > Launch Instances. Create an EC2 instance with the following specs:
+
+- `OS Image:` Ubuntu Server 24.04 LTS (64-bit x86)
+- `Instance Type:` t2.micro
+- `Key Pair:` Create a new .pem key to use with OpenSSH locally
+- `VPC:` default
+- `Security Group:` Allow SSH from Anywhere
+- `Storage:` 15GB
+
+Once the Instance is Running and passed all system reachability checks, select Instance > Security > Security Details.
+
+### Inbound Rules
+
+- Go to Security Groups > Inbound Rules > Edit Inbound Rules.
+- Add the below rules and click Save Rules.
+
+![InboundRules](./assets/inboundrules.png)
+
+### IAM Role
+
+- Go to Instances > Actions > Security > Modify IAM Role > Create New IAM Role.
+- Under Create Role choose AWS Service as Trusted Entity Type and EC2 under Use case.
+- Under Permissions select `AmazonS3FullAccess`. Provide a role name and choose Create Role.
+- Go back to Modify IAM Role > Choose the Role just created above from IAM role dropdown > Click Update IAM role.
 ---
 
 # Remote Backend Setup
@@ -113,7 +262,7 @@
 ```bash
 mkdir backend
 git clone https://github.com/sourasishbasu/ledgerly.git
-mv ./ledgerly/monitoring/* ./ledgerly/docker-compose.yml /home/ubuntu/backend
+mv $HOME/ledgerly/monitoring/* $HOME/ledgerly/docker-compose.yml $HOME/backend
 ```
 
 2. Create the logs folder and secrets file. Copy contents of `services/backend/env.example` and replace secrets and endpoints into the `.env` file.
@@ -123,11 +272,11 @@ cd backend
 mkdir logs
 touch .env
 ```
-3. Install Docker.
+3. Install [Docker on Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
 
 ## Database
 
-The default architecture utilizes AWS RDS' free `t4g.micro` instance for hosting the Postgresql database. As an alternative a `postgres` container can also be run within `Docker` on an EC2 machine for the same utility. 
+The default architecture utilizes the free `AWS RDS t4g.micro` instance for hosting the Postgres database. As an alternative a `postgres` container can also be run within `Docker` on an `EC2` machine for the same utility. 
 
 ### Default Credentials
 `username` - user
@@ -144,14 +293,14 @@ The default architecture utilizes AWS RDS' free `t4g.micro` instance for hosting
 
 <img alt="AWS Architecture" src="./assets/er.png">
 
-Copy the contents of `ledgerly.sql` into the SQL Query Editor within any database tool used for connecting to the postgres container.
+Copy the contents of `services/ledgerly.sql` into the SQL Query Editor within any database tool used for connecting to the postgres container.
 
 ## Traefik
 
 Traefik serves as a **reverse proxy** to route HTTP requests to the appropriate backend services. 
 
 
-- Traefik automatically **detects and routes traffic** to Docker services. Services must explicitly enable routing via labels, ensuring only intended services are exposed.
+- Traefik automatically **detects and routes traffic** to Docker services. Services must explicitly enable routing via labels, ensuring only intended services are exposed within the `Docker Compose` specification.
 
 - **Web traffic** is routed through an HTTP entrypoint on port 80. The API service listens internally on port 5000, which Traefik uses to forward incoming requests.
 
@@ -163,24 +312,23 @@ Traefik serves as a **reverse proxy** to route HTTP requests to the appropriate 
 
 The Ledgerly backend includes a comprehensive monitoring setup using metrics' exporters, Prometheus and Grafana. This allows user to collect metrics, visualize data, and set up alerts for your application.
 
+> [!NOTE]  
+> Due to infrastructure limitations, all monitoring tools are being setup on the same machine as the application services however this deviates from best practices and is not recommended in production.
+
 ### Exporters
 
 Services which collect and expose system and application metrics from specific resources or environments, making them available in a format that monitoring and observability systems such as Prometheus can scrape and process.
 
-#### Node Exporter
+- **Node Exporter**: Used for collectin hardware and OS-level metrics from a Linux server such as Disk I/O, CPU, Memory usage etc.
 
-Used for collectin hardware and OS-level metrics from a Linux server such as Disk I/O, CPU, Memory usage etc.
-
-#### cAdvisor
-
-Used for monitoring resource usage and performance metrics for containers.
+- **cAdvisor**: Used for monitoring resource usage and performance metrics for containers.
 
 ### Prometheus
 
 Prometheus is used to scrape and store metrics from various endpoints. The configuration for Prometheus is located in `monitoring/prometheus/prometheus.yaml`.
 
 ```bash
-hostname -I
+hostname -I # Host Private IP
 ```
 
 Replace EC2 instance's private IP into `backend/prometheus/prometheus.yml` under `node_exporter` and `cAdvisor` job's targets.
@@ -196,9 +344,14 @@ scrape_configs:
 
 Grafana is used to visualize the metrics collected by Prometheus. The configuration for Grafana datasources is located in `monitoring/grafana/datasources.yml`.
 
-- Go to dashboards > New > Import
-- Go to Import Dashboard with ID > enter 16310 > Load
-- Select Main (Prometheus) as the Data Source if prompted
+- Login to Grafana website. Go to Dashboards > New > Import
+- Go to Import Dashboard with ID. Enter `16310` > Load
+- Select Main (Prometheus) as the Data Source if prompted.
+
+### Default Credentials
+`username` - admin
+
+`pass` - projectwing
 
 Grafana Dashboard URL: `http://<instance-public-ip>:3000`
 
