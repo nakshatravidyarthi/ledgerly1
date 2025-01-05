@@ -197,8 +197,8 @@ Switch to JSON mode and paste the below policy. Then click Create.
                 "s3:GetObjectAttributes"
             ],
             "Resource": [
-                "arn:aws:s3:*:559010633691:accesspoint/*",
-                "arn:aws:s3:::projectwing/*"
+                "arn:aws:s3:*:replace-account-id:accesspoint/*",
+                "arn:aws:s3:::replace-bucket-name/*"
             ]
         }
     ]
