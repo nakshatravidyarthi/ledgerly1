@@ -168,7 +168,7 @@ AWS Lambda will be used for running the container image for the `services/receip
 - Create a Function > Container Image.
 - Provide a function name. Under Container Image URI > Browse Images choose the ECR repository created earlier and select the image tagged as latest.
 
-![lambda-uri](./assets/lambda-uri.png)
+  <img alt="Lambda URI" src="./assets/lambda-uri.png">
 
 - Under architecture choose x86_64 and leave the rest as default. Choose Create function.
 
@@ -245,7 +245,7 @@ Once the Instance is Running and passed all system reachability checks, select I
 - Go to Security Groups > Inbound Rules > Edit Inbound Rules.
 - Add the below rules and click Save Rules.
 
-![InboundRules](./assets/inboundrules.png)
+  <img alt="Inbound Rules" src="./assets/inboundrules.png">
 
 ### IAM Role
 
