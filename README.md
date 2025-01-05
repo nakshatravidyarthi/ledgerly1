@@ -193,26 +193,26 @@ Under General configuration change the defaults as below:
 - In the IAM console, under Permission Policies > Add Permissions > Create Inline Policies.
 Switch to JSON mode and paste the below policy. Then click Create.
 
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "VisualEditor0",
-            "Effect": "Allow",
-            "Action": [
-                "s3:GetObjectAcl",
-                "s3:GetObject",
-                "s3:GetObjectAttributes"
-            ],
-            "Resource": [
-                "arn:aws:s3:*:replace-account-id:accesspoint/*",
-                "arn:aws:s3:::replace-bucket-name/*"
-            ]
-        }
-    ]
-}
-```
+  ```json
+  {
+      "Version": "2012-10-17",
+      "Statement": [
+          {
+              "Sid": "VisualEditor0",
+              "Effect": "Allow",
+              "Action": [
+                  "s3:GetObjectAcl",
+                  "s3:GetObject",
+                  "s3:GetObjectAttributes"
+              ],
+              "Resource": [
+                  "arn:aws:s3:*:replace-account-id:accesspoint/*",
+                  "arn:aws:s3:::replace-bucket-name/*"
+              ]
+          }
+      ]
+  }
+  ```
 - Again, go to Add Permissions > Attach policies. 
 - Choose `AWSLambdaVPCAccessExecutionPermissions` from the list > Add permissions. 
 
