@@ -104,7 +104,7 @@
         ├── Dockerfile
         └── app.py
 
-12 directories, 28 files
+12 directories, 30 files
 ```
 
 # AWS Setup
