@@ -46,7 +46,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}:latest
-            ghcr.io/sourasishbasu/${{ env.IMAGE_NAME }}:latest
+            ghcr.io/nakshatravidyarthi/${{ env.IMAGE_NAME }}:latest
 
       - name: Log out from Docker Hub
         run: docker logout
