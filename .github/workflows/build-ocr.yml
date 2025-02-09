@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: docker/login-action@v3
         with:
           registry: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
           username: ${{ secrets.AWS_ACCESS_KEY }}
