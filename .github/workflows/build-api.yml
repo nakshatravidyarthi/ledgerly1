@@ -28,7 +28,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GGITHUB_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -36,7 +36,7 @@ jobs:
           context: ./services/backend
           file: ./services/backend/Dockerfile
           push: true
-          tags: ghcr.io/sourasishbasu/${{ env.IMAGE_NAME }}:latest
+          tags: ghcr.io/nakshatravidyarthi/${{ env.IMAGE_NAME }}:latest
 
       - name: Log out from Docker Hub
         run: docker logout
