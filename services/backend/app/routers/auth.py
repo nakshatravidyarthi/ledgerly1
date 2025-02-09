@@ -51,7 +51,7 @@ def register_user(session: SessionDep, user: UserCreate = Form(...)):
         )
         session.add(new_user)
         session.commit()
-        return {"message": "User registered successfully", "user_id": uid}
+        return {"message": "User registered successfully", "user_id": uid, "username": user.username}
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error registering user: {e}")
@@ -82,6 +82,6 @@ def login_user(session: SessionDep, loginrequest: LoginRequest = Form(...)):
         ).first()
         if not credentials or not verify_password(loginrequest.password, credentials.password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        return {"message": "Login successful", "user_id": credentials.user_id}
+        return {"message": "Login successful", "user_id": credentials.user_id, "username": credentials.username}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error logging in: {e}")

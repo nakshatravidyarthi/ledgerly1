@@ -7,6 +7,7 @@ class users(SQLModel, table=True):
     email: str = Field(index=True, unique=True)
     username: str
     password: str
+    budget: int = Field(default=0)
 
 class UserCreate(BaseModel):
     email: str
