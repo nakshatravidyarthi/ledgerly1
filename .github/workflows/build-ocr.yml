@@ -49,4 +49,4 @@ jobs:
             ghcr.io/sourasishbasu/${{ env.IMAGE_NAME }}:latest
 
       - name: Log out from Docker Hub
-        run: docker logou
+        run: docker logout
