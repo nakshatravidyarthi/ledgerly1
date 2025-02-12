@@ -14,9 +14,9 @@ scrape_configs:
 # Example job for node_exporter
  - job_name: 'node_exporter'
    static_configs:
-     - targets: ['<instance-private-ip>:9100']
+     - targets: ['<172.31.12.168>:9100']
 
 # Example job for cadvisor
  - job_name: 'cadvisor'
    static_configs:
-     - targets: ['<instance-private-ip>:8090']
+     - targets: ['<172.31.12.168>:8090']
