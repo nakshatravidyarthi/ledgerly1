@@ -40,7 +40,7 @@ jobs:
           context: ./services/backend
           file: ./services/backend/Dockerfile
           push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/expense-tracker-api:latest
+          tags: ${{ steps.login-ecr.outputs.registry }}/lambda-receipt-ocr:latest
 
       - name: Log out from AWS ECR
         run: docker logout
