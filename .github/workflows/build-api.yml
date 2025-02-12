@@ -9,7 +9,7 @@ on:
       - ".github/workflows/build-api.yml"
 
 env:
-  IMAGE_NAME: expense-tracker-api
+  IMAGE_NAME: lambda-receipt-ocr
 
 jobs:
   build-and-push:
